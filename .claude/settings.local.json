@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(timeout 10 npm run dev)",
+      "Bash(npm run:*)",
+      "Bash(git -C /c/project/claude/audio-visualizer-pro status)",
+      "Bash(git -C /c/project/claude/audio-visualizer-pro log --oneline -5)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git config:*)",
+      "Bash(npx vite:*)",
+      "Bash(npx eslint:*)"
+    ]
+  }
+}

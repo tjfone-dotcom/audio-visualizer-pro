@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { VISUALIZATION_WIDTH, VISUALIZATION_HEIGHT, MIN_VIEWPORT_WIDTH } from '../types/visualizer';
+import { ConsoleCanvas } from '../console/ConsoleCanvas';
 
 function PlayerArea() {
   return (
@@ -9,19 +10,6 @@ function PlayerArea() {
     >
       <span className="text-neutral-600 font-mono text-sm select-none">
         Player Area
-      </span>
-    </div>
-  );
-}
-
-function ConsoleCanvas() {
-  return (
-    <div
-      className="flex items-center justify-center"
-      style={{ width: 640, height: 720, background: '#0f0f0f' }}
-    >
-      <span className="text-neutral-600 font-mono text-sm select-none">
-        Console Area
       </span>
     </div>
   );
