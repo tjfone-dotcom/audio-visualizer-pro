@@ -3,6 +3,8 @@ import { TransportControls } from './TransportControls';
 import { VolumeSlider } from './VolumeSlider';
 import { StyleSelector } from './StyleSelector';
 import { AlbumArtControls } from './AlbumArtControls';
+import { RecordButton } from './RecordButton';
+import { ExportControls } from './ExportControls';
 
 export function ControlPanel() {
   return (
@@ -15,6 +17,10 @@ export function ControlPanel() {
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <StyleSelector />
         <AlbumArtControls />
+      </div>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <RecordButton />
+        <ExportControls />
       </div>
     </div>
   );

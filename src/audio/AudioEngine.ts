@@ -146,6 +146,32 @@ export class AudioEngine {
     return this.audioElement;
   }
 
+  /**
+   * Create a MediaStreamDestination connected to the gain node output.
+   * Used by RecordingManager to capture audio for recording.
+   */
+  createMediaStreamDestination(): MediaStreamAudioDestinationNode {
+    if (!this.audioContext || !this.gainNode) {
+      throw new Error('AudioEngine not initialized. Load a file first.');
+    }
+    const dest = this.audioContext.createMediaStreamDestination();
+    this.gainNode.connect(dest);
+    return dest;
+  }
+
+  /**
+   * Disconnect a previously created MediaStreamDestination from the gain node.
+   */
+  disconnectMediaStreamDestination(dest: MediaStreamAudioDestinationNode): void {
+    if (this.gainNode) {
+      try {
+        this.gainNode.disconnect(dest);
+      } catch {
+        // Already disconnected, ignore
+      }
+    }
+  }
+
   onTimeUpdate(callback: (time: number) => void): () => void {
     const handler = () => callback(this.audioElement.currentTime);
     this.audioElement.addEventListener('timeupdate', handler);
