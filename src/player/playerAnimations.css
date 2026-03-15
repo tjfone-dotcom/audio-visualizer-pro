@@ -1,0 +1,142 @@
+/* Player Animations - shared keyframes and transition utilities */
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes spin-reverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(60px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(60px);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes glowOn {
+  from {
+    opacity: 0;
+    filter: blur(20px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0px);
+  }
+}
+
+@keyframes holographicShift {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Turntable tonearm swing */
+@keyframes tonearmToRecord {
+  from { transform: rotate(-30deg); }
+  to { transform: rotate(0deg); }
+}
+
+@keyframes tonearmFromRecord {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-30deg); }
+}
+
+/* Common player container */
+.player-container {
+  position: relative;
+  width: 640px;
+  height: 720px;
+  background: #111111;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Phase transitions */
+.player-phase-opening {
+  animation: slideUp 0.8s ease-out forwards;
+}
+
+.player-phase-closing {
+  animation: slideDown 0.5s ease-in forwards;
+}
+
+/* Glow effect base */
+.mood-glow {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  transition: opacity 0.5s ease, box-shadow 0.5s ease;
+}
+
+/* Spinning disc */
+.disc-spinning {
+  animation: spin 5s linear infinite;
+}
+
+.disc-spinning-paused {
+  animation: spin 5s linear infinite;
+  animation-play-state: paused;
+}
+
+/* Reel spinning */
+.reel-spinning {
+  animation: spin linear infinite;
+}
+
+/* Track info */
+.track-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 30px 16px;
+  background: linear-gradient(transparent, rgba(0,0,0,0.8));
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 3px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}

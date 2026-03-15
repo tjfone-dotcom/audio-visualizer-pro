@@ -1,6 +1,8 @@
 import { FileUpload } from './FileUpload';
 import { TransportControls } from './TransportControls';
 import { VolumeSlider } from './VolumeSlider';
+import { StyleSelector } from './StyleSelector';
+import { AlbumArtControls } from './AlbumArtControls';
 
 export function ControlPanel() {
   return (
@@ -9,6 +11,10 @@ export function ControlPanel() {
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <TransportControls />
         <VolumeSlider />
+      </div>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <StyleSelector />
+        <AlbumArtControls />
       </div>
     </div>
   );
