@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { VisualizationArea } from './VisualizationArea';
+import { ErrorBanner } from './ErrorBanner';
 
 interface LayoutProps {
   controls: ReactNode;
@@ -15,6 +16,7 @@ export function Layout({ controls }: LayoutProps) {
       </header>
 
       <main className="flex-1 flex flex-col items-center gap-6 pb-8">
+        <ErrorBanner />
         <VisualizationArea />
         <div className="w-full max-w-5xl px-4">
           {controls}
