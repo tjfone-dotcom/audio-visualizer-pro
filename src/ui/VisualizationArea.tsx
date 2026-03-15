@@ -68,8 +68,9 @@ export function VisualizationArea() {
     const canvas = recordingCanvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d', { alpha: false });
-    if (!ctx) return;
+    const ctxOrNull = canvas.getContext('2d', { alpha: false });
+    if (!ctxOrNull) return;
+    const ctx: CanvasRenderingContext2D = ctxOrNull;
 
     if (!fullRendererRef.current) {
       fullRendererRef.current = new FullCanvasRenderer();

@@ -11,7 +11,6 @@ import {
   createLinearGradient,
   drawRoundedRect,
   drawText,
-  drawLine,
   drawImageInCircle,
   degToRad,
 } from '../drawUtils';

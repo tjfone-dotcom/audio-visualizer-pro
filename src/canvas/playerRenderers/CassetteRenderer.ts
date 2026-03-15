@@ -3,7 +3,7 @@
  * Simplified canvas version of the CSS CassettePlayer component.
  */
 
-import { CASSETTE, getCassetteReelSpeeds, TRACK_INFO, formatTime } from '../../animation/PlayerGeometry';
+import { CASSETTE, TRACK_INFO, formatTime } from '../../animation/PlayerGeometry';
 import {
   drawCircle,
   drawCircleStroke,
@@ -12,7 +12,6 @@ import {
   drawRoundedRect,
   drawRoundedRectStroke,
   drawText,
-  drawImageInCircle,
   degToRad,
 } from '../drawUtils';
 
@@ -212,7 +211,7 @@ export class CassetteRenderer {
     ctx: CanvasRenderingContext2D,
     cx: number,
     cy: number,
-    radius: number,
+    _radius: number,
     hubRadius: number,
     tapeRadius: number,
     rotation: number,

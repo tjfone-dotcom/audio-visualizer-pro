@@ -7,7 +7,7 @@ const PEAK_FALL_RATE = 0.0012; // per ms
 export class LevelMeter implements VisualizerRenderer {
   private width = 320;
   private height = 360;
-  private dataArray: Uint8Array | null = null;
+  private dataArray: Uint8Array<ArrayBuffer> | null = null;
   private peaks: number[] = new Array(BAR_COUNT).fill(0);
   private peakTimestamps: number[] = new Array(BAR_COUNT).fill(0);
 
@@ -19,7 +19,7 @@ export class LevelMeter implements VisualizerRenderer {
   render(ctx: CanvasRenderingContext2D, analyser: AnalyserNode, timestamp: number): void {
     const bufferLength = analyser.frequencyBinCount;
     if (!this.dataArray || this.dataArray.length !== bufferLength) {
-      this.dataArray = new Uint8Array(bufferLength);
+      this.dataArray = new Uint8Array(new ArrayBuffer(bufferLength));
     }
     analyser.getByteFrequencyData(this.dataArray);
 

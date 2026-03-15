@@ -3,7 +3,7 @@ import type { VisualizerRenderer } from './types.js';
 export class Waveform implements VisualizerRenderer {
   private width = 320;
   private height = 360;
-  private dataArray: Uint8Array | null = null;
+  private dataArray: Uint8Array<ArrayBuffer> | null = null;
 
   resize(width: number, height: number): void {
     this.width = width;
@@ -13,7 +13,7 @@ export class Waveform implements VisualizerRenderer {
   render(ctx: CanvasRenderingContext2D, analyser: AnalyserNode): void {
     const bufferLength = analyser.fftSize;
     if (!this.dataArray || this.dataArray.length !== bufferLength) {
-      this.dataArray = new Uint8Array(bufferLength);
+      this.dataArray = new Uint8Array(new ArrayBuffer(bufferLength));
     }
     analyser.getByteTimeDomainData(this.dataArray);
 

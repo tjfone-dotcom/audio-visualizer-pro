@@ -5,7 +5,7 @@ const BAR_COUNT = 48;
 export class RTA implements VisualizerRenderer {
   private width = 320;
   private height = 360;
-  private dataArray: Uint8Array | null = null;
+  private dataArray: Uint8Array<ArrayBuffer> | null = null;
   private smoothedValues: Float32Array = new Float32Array(BAR_COUNT);
 
   resize(width: number, height: number): void {
@@ -16,7 +16,7 @@ export class RTA implements VisualizerRenderer {
   render(ctx: CanvasRenderingContext2D, analyser: AnalyserNode): void {
     const bufferLength = analyser.frequencyBinCount;
     if (!this.dataArray || this.dataArray.length !== bufferLength) {
-      this.dataArray = new Uint8Array(bufferLength);
+      this.dataArray = new Uint8Array(new ArrayBuffer(bufferLength));
     }
     analyser.getByteFrequencyData(this.dataArray);
 

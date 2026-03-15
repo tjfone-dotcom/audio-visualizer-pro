@@ -10,7 +10,7 @@ import { ConsoleRenderer } from '../console/ConsoleRenderer';
 import { TurntableRenderer, type TurntableRenderState } from './playerRenderers/TurntableRenderer';
 import { CDRenderer, type CDRenderState } from './playerRenderers/CDRenderer';
 import { CassetteRenderer, type CassetteRenderState } from './playerRenderers/CassetteRenderer';
-import { getCassetteReelSpeeds, CASSETTE, TURNTABLE, CD_PLAYER } from '../animation/PlayerGeometry';
+import { getCassetteReelSpeeds } from '../animation/PlayerGeometry';
 
 const TOTAL_WIDTH = 1280;
 const TOTAL_HEIGHT = 720;

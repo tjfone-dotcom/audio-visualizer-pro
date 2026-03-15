@@ -41,7 +41,7 @@ function buildViridisColormap(): Uint8Array {
 export class Spectrogram implements VisualizerRenderer {
   private width = 320;
   private height = 360;
-  private dataArray: Uint8Array | null = null;
+  private dataArray: Uint8Array<ArrayBuffer> | null = null;
   private imageData: ImageData | null = null;
   private colormap: Uint8Array;
 
@@ -72,7 +72,7 @@ export class Spectrogram implements VisualizerRenderer {
   render(ctx: CanvasRenderingContext2D, analyser: AnalyserNode): void {
     const bufferLength = analyser.frequencyBinCount;
     if (!this.dataArray || this.dataArray.length !== bufferLength) {
-      this.dataArray = new Uint8Array(bufferLength);
+      this.dataArray = new Uint8Array(new ArrayBuffer(bufferLength));
     }
     analyser.getByteFrequencyData(this.dataArray);
 
