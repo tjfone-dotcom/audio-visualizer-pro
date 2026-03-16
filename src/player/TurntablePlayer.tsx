@@ -1,6 +1,9 @@
+import { useState, useEffect, useRef } from 'react';
 import { useAppState } from '../state/AppContext';
 import { TURNTABLE, getTonearmAngle } from '../animation/PlayerGeometry';
 import { TrackInfo } from './TrackInfo';
+import { LyricsDisplay } from './LyricsDisplay';
+import { AudioEngine } from '../audio/AudioEngine';
 
 /**
  * TurntablePlayer - Realistic turntable with vinyl record, tonearm, and wood-tone base.
@@ -8,16 +11,77 @@ import { TrackInfo } from './TrackInfo';
  */
 export function TurntablePlayer() {
   const { state, dispatch } = useAppState();
-  const { animationPhase, albumArtUrl, currentTime, audioDuration } = state;
+  const { animationPhase, playbackState, albumArtUrl, currentTime, audioDuration, mediaSwapTrigger } = state;
 
   const progress = audioDuration > 0 ? currentTime / audioDuration : 0;
   const tonearmAngle = getTonearmAngle(progress);
 
-  const isVisible =
-    animationPhase !== 'closed';
+  const isVisible = animationPhase !== 'closed';
   const isSpinning = animationPhase === 'playing';
-  const isOpen = animationPhase === 'open' || animationPhase === 'playing';
-  const tonearmOnRecord = isOpen;
+  const tonearmOnRecord = animationPhase === 'playing';
+
+  // Disc swap animation
+  const [showSwap, setShowSwap] = useState(false);
+  const prevSwapTrigger = useRef(mediaSwapTrigger);
+
+  useEffect(() => {
+    if (mediaSwapTrigger > 0 && mediaSwapTrigger !== prevSwapTrigger.current) {
+      setShowSwap(true);
+      const timer = setTimeout(() => setShowSwap(false), 1200);
+      prevSwapTrigger.current = mediaSwapTrigger;
+      return () => clearTimeout(timer);
+    }
+    prevSwapTrigger.current = mediaSwapTrigger;
+  }, [mediaSwapTrigger]);
+
+  // Real-time bass energy level for analog slider (0~1, smoothed)
+  // Use ref + throttled setState to avoid excessive re-renders
+  const [bassLevel, setBassLevel] = useState(0);
+  const rafRef = useRef<number>(0);
+  const smoothedRef = useRef(0);
+  const lastSetRef = useRef(0);
+
+  useEffect(() => {
+    if (animationPhase !== 'playing') {
+      setBassLevel(0);
+      smoothedRef.current = 0;
+      lastSetRef.current = 0;
+      return;
+    }
+    const engine = AudioEngine.getInstance();
+    const UPDATE_INTERVAL = 50; // ms - update state ~20fps instead of 60fps
+
+    const tick = (now: number) => {
+      const analysers = engine.getAnalysers();
+      if (analysers) {
+        const data = new Uint8Array(analysers.medium.frequencyBinCount);
+        analysers.medium.getByteFrequencyData(data);
+        // Bass energy (bins 0~15 ≈ 0~330Hz) normalized to 0~1
+        let bassSum = 0;
+        for (let i = 0; i < 16; i++) bassSum += data[i];
+        const normalized = bassSum / 16 / 255;
+        // Smooth lerp for gentle movement
+        smoothedRef.current = smoothedRef.current * 0.92 + normalized * 0.08;
+        // Throttle setState to reduce re-renders
+        if (now - lastSetRef.current > UPDATE_INTERVAL) {
+          setBassLevel(smoothedRef.current);
+          lastSetRef.current = now;
+        }
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [animationPhase]);
+
+  // 3-way disc class: spinning / paused / stopped
+  const getDiscClass = () => {
+    const classes: string[] = [];
+    if (animationPhase === 'playing') classes.push('disc-spinning');
+    else if (playbackState === 'paused') classes.push('disc-spinning-paused');
+    if (showSwap) classes.push('disc-swap-in');
+    return classes.join(' ');
+  };
 
   if (!isVisible) return null;
 
@@ -35,7 +99,6 @@ export function TurntablePlayer() {
       onAnimationEnd={() => {
         if (animationPhase === 'opening') {
           dispatch({ type: 'SET_ANIMATION_PHASE', payload: 'open' });
-          // Auto-advance to playing after tonearm settles
           setTimeout(() => {
             dispatch({ type: 'SET_ANIMATION_PHASE', payload: 'playing' });
           }, 600);
@@ -80,7 +143,7 @@ export function TurntablePlayer() {
 
       {/* Vinyl record */}
       <div
-        className={isSpinning ? 'disc-spinning' : ''}
+        className={getDiscClass()}
         style={{
           position: 'absolute',
           left: TURNTABLE.platterX - TURNTABLE.vinylRadius,
@@ -214,23 +277,60 @@ export function TurntablePlayer() {
         />
       </div>
 
-      {/* Speed indicator label */}
+      {/* Analog bass slider + STEREO label */}
       <div
         style={{
           position: 'absolute',
-          right: 60,
+          right: 55,
           bottom: 120,
-          fontFamily: 'ui-monospace, monospace',
-          fontSize: 10,
-          color: '#665544',
-          letterSpacing: 1,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
         }}
       >
-        33 RPM
+        {/* Slider */}
+        <div
+          style={{
+            position: 'relative',
+            width: 48,
+            height: 4,
+            borderRadius: 2,
+            background: '#332b20',
+            boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.4)',
+          }}
+        >
+          {/* Knob */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: `${(isSpinning ? bassLevel : 0.5) * 100}%`,
+              transform: 'translate(-50%, -50%)',
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, #bba880 0%, #998866 100%)',
+              boxShadow: '0 0 4px rgba(153,136,102,0.3), 0 1px 2px rgba(0,0,0,0.3)',
+              transition: 'left 0.15s ease-out',
+            }}
+          />
+        </div>
+        {/* STEREO label */}
+        <span
+          style={{
+            fontFamily: 'ui-monospace, monospace',
+            fontSize: 10,
+            color: '#665544',
+            letterSpacing: 1,
+          }}
+        >
+          STEREO
+        </span>
       </div>
 
       {/* Power LED */}
       <div
+        className={!isSpinning && isVisible ? 'led-idle' : ''}
         style={{
           position: 'absolute',
           left: 60,
@@ -238,12 +338,14 @@ export function TurntablePlayer() {
           width: 6,
           height: 6,
           borderRadius: '50%',
-          background: isSpinning ? '#0f0' : '#333',
+          color: '#0f0',
+          background: isSpinning ? '#0f0' : '#0a4a0a',
           boxShadow: isSpinning ? '0 0 6px #0f0' : 'none',
-          transition: 'all 0.3s',
+          transition: isSpinning ? 'all 0.3s' : 'none',
         }}
       />
 
+      <LyricsDisplay />
       <TrackInfo />
     </div>
   );

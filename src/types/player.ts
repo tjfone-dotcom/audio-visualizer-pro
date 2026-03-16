@@ -15,6 +15,11 @@ export interface AppError {
   message: string;
 }
 
+export interface LyricLine {
+  time: number; // seconds
+  text: string;
+}
+
 export interface AppState {
   playbackState: PlaybackState;
   playerStyle: PlayerStyle;
@@ -26,9 +31,11 @@ export interface AppState {
   volume: number;
   albumArtUrl: string | null;
   albumArtSource: AlbumArtSource;
+  lyrics: LyricLine[];
   recordingState: RecordingState;
   recordedBlob: Blob | null;
   aiPrompt: string;
   aiGenerating: boolean;
   error: AppError | null;
+  mediaSwapTrigger: number;
 }

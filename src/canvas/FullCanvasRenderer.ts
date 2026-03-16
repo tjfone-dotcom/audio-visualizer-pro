@@ -37,6 +37,12 @@ export class FullCanvasRenderer {
   private rightReelRotation = 0;
   private lastTimestamp = 0;
 
+  // Audio-reactive decoration state
+  private bassEnergy = 0; // smoothed 0~1 for turntable slider
+  private beatActive = false;
+  private lastBeatTime = 0;
+  private vuLevels: number[] = [0, 0, 0, 0, 0];
+
   constructor() {
     this.consoleRenderer = new ConsoleRenderer(HALF_WIDTH, TOTAL_HEIGHT);
     this.turntableRenderer = new TurntableRenderer();
@@ -57,6 +63,11 @@ export class FullCanvasRenderer {
     // Update rotations if playing
     if (state.animationPhase === 'playing') {
       this.updateRotations(state, deltaTime);
+    }
+
+    // Update audio-reactive decoration data
+    if (state.animationPhase === 'playing' && analysers) {
+      this.updateDecorations(analysers, timestamp);
     }
 
     // Clear entire canvas
@@ -110,6 +121,41 @@ export class FullCanvasRenderer {
     }
   }
 
+  private updateDecorations(analysers: AnalyserNodeSet, timestamp: number): void {
+    // Bass energy from medium analyser (smoothing 0.5)
+    const medData = new Uint8Array(analysers.medium.frequencyBinCount);
+    analysers.medium.getByteFrequencyData(medData);
+    let bassSum = 0;
+    for (let i = 0; i < 16; i++) bassSum += medData[i];
+    const bassAvg = bassSum / 16;
+    const normalized = bassAvg / 255;
+
+    // Smooth lerp for gentle slider movement
+    this.bassEnergy = this.bassEnergy * 0.92 + normalized * 0.08;
+
+    // Simple beat detection for CD LED (threshold-based)
+    const isBeat = bassAvg > 170 && timestamp - this.lastBeatTime > 200;
+    if (isBeat) {
+      this.beatActive = true;
+      this.lastBeatTime = timestamp;
+    } else if (timestamp - this.lastBeatTime > 80) {
+      this.beatActive = false;
+    }
+
+    // VU levels: 5 frequency bands from reactive analyser
+    const reactiveData = new Uint8Array(analysers.reactive.frequencyBinCount);
+    analysers.reactive.getByteFrequencyData(reactiveData);
+    const binCount = reactiveData.length;
+    const binsPerBand = Math.floor(binCount / 5);
+    for (let b = 0; b < 5; b++) {
+      let sum = 0;
+      for (let i = b * binsPerBand; i < (b + 1) * binsPerBand; i++) {
+        sum += reactiveData[i];
+      }
+      this.vuLevels[b] = sum / binsPerBand / 255;
+    }
+  }
+
   private renderPlayer(ctx: CanvasRenderingContext2D, state: FullCanvasRenderState): void {
     // Dark background for player area
     ctx.fillStyle = '#0a0a0a';
@@ -124,6 +170,7 @@ export class FullCanvasRenderer {
           audioDuration: state.audioDuration,
           rotation: this.discRotation,
           audioFileName: state.audioFileName,
+          bassEnergy: this.bassEnergy,
         };
         this.turntableRenderer.render(ctx, renderState);
         break;
@@ -136,6 +183,7 @@ export class FullCanvasRenderer {
           audioDuration: state.audioDuration,
           rotation: this.discRotation,
           audioFileName: state.audioFileName,
+          beatActive: this.beatActive,
         };
         this.cdRenderer.render(ctx, renderState);
         break;
@@ -149,6 +197,7 @@ export class FullCanvasRenderer {
           leftReelRotation: this.leftReelRotation,
           rightReelRotation: this.rightReelRotation,
           audioFileName: state.audioFileName,
+          vuLevels: [...this.vuLevels],
         };
         this.cassetteRenderer.render(ctx, renderState);
         break;

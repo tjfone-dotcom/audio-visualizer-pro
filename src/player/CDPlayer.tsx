@@ -1,6 +1,9 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppState } from '../state/AppContext';
 import { CD_PLAYER } from '../animation/PlayerGeometry';
 import { TrackInfo } from './TrackInfo';
+import { LyricsDisplay } from './LyricsDisplay';
+import { AudioEngine } from '../audio/AudioEngine';
 
 /**
  * CDPlayer - Realistic CD player with holographic disc, metallic body, and blue mood lighting.
@@ -8,11 +11,64 @@ import { TrackInfo } from './TrackInfo';
  */
 export function CDPlayer() {
   const { state, dispatch } = useAppState();
-  const { animationPhase, albumArtUrl } = state;
+  const { animationPhase, albumArtUrl, playbackState, mediaSwapTrigger } = state;
 
   const isVisible = animationPhase !== 'closed';
   const isSpinning = animationPhase === 'playing';
   const isOpen = animationPhase === 'open' || animationPhase === 'playing';
+
+  // 3-way disc class: spinning / paused (preserve angle) / stopped (reset)
+  function getDiscClass(): string {
+    if (animationPhase === 'playing') return 'disc-spinning';
+    if (playbackState === 'paused') return 'disc-spinning-paused';
+    return '';
+  }
+
+  // Beat detection LED
+  const [beatActive, setBeatActive] = useState(false);
+  const rafRef = useRef<number>(0);
+  const lastBeatRef = useRef(0);
+
+  useEffect(() => {
+    if (animationPhase !== 'playing') {
+      setBeatActive(false);
+      return;
+    }
+    const engine = AudioEngine.getInstance();
+    const tick = () => {
+      const analysers = engine.getAnalysers();
+      if (analysers) {
+        const data = new Uint8Array(analysers.raw.frequencyBinCount);
+        analysers.raw.getByteFrequencyData(data);
+        // Bass band average (bins 0~20 ≈ 0~430Hz)
+        let bassSum = 0;
+        for (let i = 0; i < 20; i++) bassSum += data[i];
+        const bassAvg = bassSum / 20;
+        const now = performance.now();
+        if (bassAvg > 180 && now - lastBeatRef.current > 150) {
+          setBeatActive(true);
+          lastBeatRef.current = now;
+          setTimeout(() => setBeatActive(false), 80);
+        }
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [animationPhase]);
+
+  // Disc swap animation on first play after file load
+  const [showSwap, setShowSwap] = useState(false);
+  const prevSwapTrigger = useRef(mediaSwapTrigger);
+  useEffect(() => {
+    if (mediaSwapTrigger > 0 && mediaSwapTrigger !== prevSwapTrigger.current) {
+      prevSwapTrigger.current = mediaSwapTrigger;
+      setShowSwap(true);
+      const timer = setTimeout(() => setShowSwap(false), 1200);
+      return () => clearTimeout(timer);
+    }
+    prevSwapTrigger.current = mediaSwapTrigger;
+  }, [mediaSwapTrigger]);
 
   if (!isVisible) return null;
 
@@ -59,23 +115,21 @@ export function CDPlayer() {
 
       {/* Blue mood glow */}
       <div
-        className="mood-glow"
+        className={`mood-glow ${!isSpinning && isVisible ? 'ambient-idle-glow' : ''}`}
         style={{
           left: CD_PLAYER.discX - CD_PLAYER.discRadius - 20,
           top: CD_PLAYER.discY - CD_PLAYER.discRadius - 20,
           width: (CD_PLAYER.discRadius + 20) * 2,
           height: (CD_PLAYER.discRadius + 20) * 2,
-          opacity: isOpen ? 0.7 : 0,
-          boxShadow: isOpen
-            ? '0 0 60px 20px rgba(60, 120, 255, 0.3), inset 0 0 40px rgba(60, 120, 255, 0.1)'
-            : 'none',
-          transition: 'opacity 0.5s ease, box-shadow 0.5s ease',
+          opacity: isSpinning ? 0.7 : undefined,
+          boxShadow: '0 0 60px 20px rgba(60, 120, 255, 0.3), inset 0 0 40px rgba(60, 120, 255, 0.1)',
+          transition: isSpinning ? 'opacity 0.5s ease, box-shadow 0.5s ease' : 'none',
         }}
       />
 
       {/* CD disc */}
       <div
-        className={isSpinning ? 'disc-spinning' : ''}
+        className={`${getDiscClass()}${showSwap ? ' disc-swap-in' : ''}`}
         style={{
           position: 'absolute',
           left: CD_PLAYER.discX - CD_PLAYER.discRadius,
@@ -193,24 +247,42 @@ export function CDPlayer() {
         />
       </div>
 
-      {/* Brand label */}
+      {/* Beat LED + OPTICAL label */}
       <div
         style={{
           position: 'absolute',
-          left: CD_PLAYER.discX - 30,
+          left: CD_PLAYER.discX - 40,
           bottom: 120,
-          fontFamily: 'ui-monospace, monospace',
-          fontSize: 10,
-          color: '#556',
-          letterSpacing: 2,
-          textTransform: 'uppercase',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
         }}
       >
-        DIGITAL
+        <div
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            background: beatActive ? '#ff4444' : '#331111',
+            boxShadow: beatActive ? '0 0 8px 2px #ff4444' : 'none',
+            transition: 'all 0.05s',
+          }}
+        />
+        <span
+          style={{
+            fontFamily: 'ui-monospace, monospace',
+            fontSize: 10,
+            color: '#556',
+            letterSpacing: 2,
+          }}
+        >
+          OPTICAL
+        </span>
       </div>
 
       {/* Power LED */}
       <div
+        className={!isSpinning && isVisible ? 'led-idle' : ''}
         style={{
           position: 'absolute',
           left: 60,
@@ -218,12 +290,14 @@ export function CDPlayer() {
           width: 6,
           height: 6,
           borderRadius: '50%',
-          background: isSpinning ? '#4a9eff' : '#333',
+          color: '#4a9eff',
+          background: isSpinning ? '#4a9eff' : '#1a3366',
           boxShadow: isSpinning ? '0 0 8px #4a9eff' : 'none',
-          transition: 'all 0.3s',
+          transition: isSpinning ? 'all 0.3s' : 'none',
         }}
       />
 
+      <LyricsDisplay />
       <TrackInfo />
     </div>
   );

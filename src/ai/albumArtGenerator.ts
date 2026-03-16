@@ -1,17 +1,25 @@
 /**
- * albumArtGenerator.ts - Generate album art using Google Gemini Imagen API.
+ * albumArtGenerator.ts - Generate album art using Google Gemini Flash Image API.
  *
- * Calls the Imagen 3.0 model to generate a 1024x1024 image from a text prompt.
+ * Calls the gemini-3.1-flash-image-preview model via generateContent endpoint.
  * Returns a data URL (base64) to avoid CORS issues with object URLs.
+ * Default output resolution: 1024x1024 (1K).
  */
 
-const IMAGEN_API_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict';
+const GEMINI_API_URL =
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent';
 
-export interface ImagenResponse {
-  predictions?: Array<{
-    bytesBase64Encoded: string;
-    mimeType?: string;
+export interface GeminiResponse {
+  candidates?: Array<{
+    content: {
+      parts: Array<{
+        text?: string;
+        inlineData?: {
+          mimeType: string;
+          data: string;
+        };
+      }>;
+    };
   }>;
   error?: {
     code: number;
@@ -21,7 +29,7 @@ export interface ImagenResponse {
 }
 
 /**
- * Generate album art from a text prompt using Google Imagen API.
+ * Generate album art from a text prompt using Gemini Flash Image Generation API.
  * @returns data:image/png;base64,... URL string
  */
 export async function generateAlbumArt(
@@ -36,13 +44,16 @@ export async function generateAlbumArt(
     throw new Error('Prompt is required. Please analyze music or enter a prompt.');
   }
 
-  const url = `${IMAGEN_API_URL}?key=${encodeURIComponent(apiKey.trim())}`;
+  const url = `${GEMINI_API_URL}?key=${encodeURIComponent(apiKey.trim())}`;
 
   const body = {
-    instances: [{ prompt: prompt.trim() }],
-    parameters: {
-      sampleCount: 1,
-      aspectRatio: '1:1',
+    contents: [
+      {
+        parts: [{ text: prompt.trim() }],
+      },
+    ],
+    generationConfig: {
+      responseModalities: ['IMAGE'],
     },
   };
 
@@ -55,14 +66,14 @@ export async function generateAlbumArt(
     });
   } catch (err) {
     throw new Error(
-      `Network error while calling Imagen API. Check your internet connection. (${err instanceof Error ? err.message : String(err)})`,
+      `Network error while calling Gemini API. Check your internet connection. (${err instanceof Error ? err.message : String(err)})`,
     );
   }
 
   if (!response.ok) {
     let errorMessage = `API returned status ${response.status}`;
     try {
-      const errorData = (await response.json()) as ImagenResponse;
+      const errorData = (await response.json()) as GeminiResponse;
       if (errorData.error?.message) {
         errorMessage = errorData.error.message;
       }
@@ -79,19 +90,26 @@ export async function generateAlbumArt(
     throw new Error(`Image generation failed: ${errorMessage}`);
   }
 
-  const data = (await response.json()) as ImagenResponse;
+  const data = (await response.json()) as GeminiResponse;
 
-  if (!data.predictions || data.predictions.length === 0) {
+  // Extract image from Gemini response: candidates[0].content.parts[] -> find inlineData
+  if (!data.candidates || data.candidates.length === 0) {
     throw new Error('No image was generated. The API returned an empty response.');
   }
 
-  const prediction = data.predictions[0];
-  const mimeType = prediction.mimeType || 'image/png';
-  const base64 = prediction.bytesBase64Encoded;
-
-  if (!base64) {
-    throw new Error('Generated image data was empty.');
+  const parts = data.candidates[0].content?.parts;
+  if (!parts || parts.length === 0) {
+    throw new Error('No image was generated. The response contained no parts.');
   }
+
+  // Find the first part with image data
+  const imagePart = parts.find((p) => p.inlineData?.data);
+
+  if (!imagePart || !imagePart.inlineData) {
+    throw new Error('No image data found in the response.');
+  }
+
+  const { mimeType, data: base64 } = imagePart.inlineData;
 
   return `data:${mimeType};base64,${base64}`;
 }

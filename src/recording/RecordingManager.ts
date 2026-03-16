@@ -67,7 +67,7 @@ export class RecordingManager {
     const mimeType = this.getMimeType();
     this.mediaRecorder = new MediaRecorder(combinedStream, {
       mimeType,
-      videoBitsPerSecond: 2500000, // 2.5 Mbps
+      videoBitsPerSecond: 8000000, // 8 Mbps for sharp HD quality
     });
 
     this.mediaRecorder.ondataavailable = (event: BlobEvent) => {

@@ -43,9 +43,7 @@ export class AnimationController {
     if (analysers) {
       this.renderer.render(this.ctx, analysers, performance.now());
     } else {
-      // Just clear to background
-      this.ctx.fillStyle = '#0f0f0f';
-      this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+      this.renderer.renderIdle(this.ctx);
     }
   }
 

@@ -43,11 +43,15 @@ export class Spectrogram implements VisualizerRenderer {
   private height = 360;
   private dataArray: Uint8Array<ArrayBuffer> | null = null;
   private imageData: ImageData | null = null;
+  /** Offscreen canvas: putImageData ignores ctx.translate(), so we render here then drawImage. */
+  private offscreen: OffscreenCanvas | null = null;
+  private offCtx: OffscreenCanvasRenderingContext2D | null = null;
   private colormap: Uint8Array;
 
-  private padX = 8;
-  private padTop = 28;
-  private padBottom = 8;
+  private padX = 16;
+  private padTop = 36;
+  private padBottom = 16;
+  private cornerRadius = 8;
 
   constructor() {
     this.colormap = buildViridisColormap();
@@ -56,8 +60,9 @@ export class Spectrogram implements VisualizerRenderer {
   resize(width: number, height: number): void {
     this.width = width;
     this.height = height;
-    // Reset image data on resize
     this.imageData = null;
+    this.offscreen = null;
+    this.offCtx = null;
   }
 
   private getDrawArea() {
@@ -80,10 +85,16 @@ export class Spectrogram implements VisualizerRenderer {
     const drawW = area.w;
     const drawH = area.h;
 
-    // Initialize or update ImageData
+    // Initialize offscreen canvas
+    if (!this.offscreen || this.offscreen.width !== drawW || this.offscreen.height !== drawH) {
+      this.offscreen = new OffscreenCanvas(drawW, drawH);
+      this.offCtx = this.offscreen.getContext('2d');
+      this.imageData = null;
+    }
+    if (!this.offCtx) return;
+
     if (!this.imageData || this.imageData.width !== drawW || this.imageData.height !== drawH) {
-      this.imageData = ctx.createImageData(drawW, drawH);
-      // Fill with dark background
+      this.imageData = new ImageData(drawW, drawH);
       const pixels = this.imageData.data;
       for (let i = 0; i < pixels.length; i += 4) {
         pixels[i] = 15;
@@ -98,20 +109,15 @@ export class Spectrogram implements VisualizerRenderer {
     // Scroll left: shift all pixel rows left by 1 pixel (4 bytes)
     for (let row = 0; row < drawH; row++) {
       const rowStart = row * drawW * 4;
-      // Use copyWithin for efficient shifting
       pixels.copyWithin(rowStart, rowStart + 4, rowStart + drawW * 4);
     }
 
     // Draw new column on the right edge
     for (let row = 0; row < drawH; row++) {
-      // Map row to frequency bin (invert: top = high freq, bottom = low freq)
       const freqRatio = 1 - row / drawH;
-      // Use a logarithmic mapping for more useful frequency display
       const logRatio = Math.pow(freqRatio, 2);
       const bin = Math.floor(logRatio * (bufferLength - 1));
       const value = this.dataArray[Math.min(bin, bufferLength - 1)];
-
-      // Apply slight boost to make quiet signals more visible
       const boosted = Math.min(255, Math.floor(value * 1.2));
 
       const colorIdx = boosted;
@@ -126,13 +132,22 @@ export class Spectrogram implements VisualizerRenderer {
       pixels[pixelIdx + 3] = 255;
     }
 
-    // Put the ImageData onto the canvas
-    ctx.putImageData(this.imageData, area.x, area.y);
+    // Render via offscreen canvas with rounded corner clipping
+    this.offCtx.putImageData(this.imageData, 0, 0);
 
-    // Subtle border around spectrogram area
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(area.x, area.y, drawW, drawH, this.cornerRadius);
+    ctx.clip();
+    ctx.drawImage(this.offscreen, area.x, area.y);
+    ctx.restore();
+
+    // Subtle rounded border
     ctx.strokeStyle = 'rgba(255,255,255,0.08)';
     ctx.lineWidth = 0.5;
-    ctx.strokeRect(area.x, area.y, drawW, drawH);
+    ctx.beginPath();
+    ctx.roundRect(area.x, area.y, drawW, drawH, this.cornerRadius);
+    ctx.stroke();
 
     // Label
     ctx.font = '10px "JetBrains Mono", "Fira Code", monospace';

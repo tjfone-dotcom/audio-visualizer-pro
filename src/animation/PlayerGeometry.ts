@@ -24,14 +24,15 @@ export const PLAYER_CENTER_Y = PLAYER_HEIGHT / 2 - 40; // offset up for track in
 export const TURNTABLE = {
   platterRadius: 200,
   vinylRadius: 185,
-  labelRadius: 60,
+  labelRadius: 72,
   platterX: PLAYER_CENTER_X,
   platterY: PLAYER_CENTER_Y - 10,
   tonearmPivotX: PLAYER_CENTER_X + 190,
   tonearmPivotY: PLAYER_CENTER_Y - 200,
   tonearmLength: 220,
   tonearmRestAngle: -30,
-  tonearmPlayAngle: 5,
+  tonearmStartAngle: 8,    // angle when tonearm first lands on record (outer edge)
+  tonearmPlayAngle: 22,    // angle near end of record (inner edge)
   spinDuration: 5, // seconds per rotation
 } as const;
 
@@ -97,11 +98,13 @@ export function getCassetteReelSpeeds(progress: number): {
 
 /**
  * Calculate tonearm angle based on playback progress.
+ * When on record, the tonearm starts at tonearmStartAngle (not rest)
+ * and gradually moves toward tonearmPlayAngle as the song progresses.
  */
 export function getTonearmAngle(progress: number): number {
-  const { tonearmRestAngle, tonearmPlayAngle } = TURNTABLE;
-  const range = tonearmPlayAngle - tonearmRestAngle;
-  return tonearmRestAngle + range * Math.max(0, Math.min(1, progress));
+  const { tonearmStartAngle, tonearmPlayAngle } = TURNTABLE;
+  const range = tonearmPlayAngle - tonearmStartAngle;
+  return tonearmStartAngle + range * Math.max(0, Math.min(1, progress));
 }
 
 /**

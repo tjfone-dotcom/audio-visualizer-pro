@@ -240,68 +240,35 @@ function deriveMood(
 }
 
 /**
- * Convert music characteristics + optional user hint into an image generation prompt.
+ * Convert music characteristics + optional user hint into a structured image generation prompt.
+ * Uses a role-based prompt format for higher quality, more artistic results.
  */
 export function generatePromptFromCharacteristics(
   chars: MusicCharacteristics,
   userHint?: string,
 ): string {
-  const parts: string[] = ['Album cover art, abstract digital artwork'];
+  const styleHintLine = userHint?.trim()
+    ? `* Style hint: ${userHint.trim()}`
+    : '* Style hint: (none provided - choose freely)';
 
-  // Color palette based on energy and frequency
-  if (chars.energy === 'high') {
-    if (chars.dominantRange === 'bass') {
-      parts.push('deep red and orange fire tones, explosive energy');
-    } else if (chars.dominantRange === 'treble') {
-      parts.push('electric blue and white lightning, bright neon streaks');
-    } else {
-      parts.push('vibrant purple and magenta gradients, dynamic motion');
-    }
-  } else if (chars.energy === 'medium') {
-    if (chars.dominantRange === 'bass') {
-      parts.push('warm amber and bronze tones, smooth flowing shapes');
-    } else if (chars.dominantRange === 'treble') {
-      parts.push('cool cyan and teal, crystalline patterns');
-    } else {
-      parts.push('rich purple and indigo, organic wave forms');
-    }
-  } else {
-    if (chars.dominantRange === 'bass') {
-      parts.push('deep navy and dark purple, misty and ethereal');
-    } else if (chars.dominantRange === 'treble') {
-      parts.push('soft pastel pink and lavender, delicate and floating');
-    } else {
-      parts.push('muted earth tones, tranquil and serene');
-    }
-  }
+  return `[Role Definition]
+You are the world's most renowned album cover art designer. You don't just generate images; you are a visionary who transmutes the soul and acoustic characteristics of music into visual masterpieces. Every design you create must be original, profound, and a perfect visual manifestation of the auditory experience.
 
-  // Bass weight influences texture
-  if (chars.bassWeight === 'heavy') {
-    parts.push('heavy textured layers, bold geometric forms');
-  } else if (chars.bassWeight === 'light') {
-    parts.push('wispy translucent layers, fine detailed patterns');
-  }
+[Mission]
+Analyze the provided musical parameters and create a highly detailed, creative, and artistic album cover image that represents the music's identity.
 
-  // Dynamic range influences composition
-  if (chars.dynamicRange === 'wide') {
-    parts.push('strong contrast between light and shadow, cinematic depth');
-  }
+[Input Parameters]
+* Energy: ${chars.energy}
+* Bass Weight: ${chars.bassWeight}
+* Dominant Range: ${chars.dominantRange}
+* Dynamic Range: ${chars.dynamicRange}
+* Estimated BPM: ${chars.estimatedBPM}
+* Mood: ${chars.mood}
+${styleHintLine}
 
-  // BPM influences visual rhythm
-  if (chars.estimatedBPM > 150) {
-    parts.push('fast rhythmic repeating patterns');
-  } else if (chars.estimatedBPM < 80) {
-    parts.push('slow sweeping curves, meditative');
-  }
-
-  parts.push(`mood: ${chars.mood}`);
-
-  // Append user hint if provided
-  if (userHint?.trim()) {
-    parts.push(userHint.trim());
-  }
-
-  parts.push('high quality, no text, no words, square format');
-
-  return parts.join('. ');
+[Generation Guidelines]
+* Original Conceptualization: Do not just list parameters. Combine them into a cohesive visual narrative.
+* Art Style Selection: Choose a modern, sophisticated style that suits the genre.
+* Mandatory Constraints:
+  - No text (no lyrics, artist names, titles, watermarks, or signatures).`;
 }

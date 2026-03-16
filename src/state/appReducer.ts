@@ -4,7 +4,7 @@ import type { AppAction } from './actions';
 export const initialState: AppState = {
   playbackState: 'idle',
   playerStyle: 'turntable',
-  animationPhase: 'closed',
+  animationPhase: 'open',
   animationProgress: 0,
   audioFile: null,
   audioDuration: 0,
@@ -12,11 +12,13 @@ export const initialState: AppState = {
   volume: 0.75,
   albumArtUrl: null,
   albumArtSource: null,
+  lyrics: [],
   recordingState: 'idle',
   recordedBlob: null,
   aiPrompt: '',
   aiGenerating: false,
   error: null,
+  mediaSwapTrigger: 0,
 };
 
 export function appReducer(state: AppState, action: AppAction): AppState {
@@ -30,7 +32,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case 'SET_ANIMATION_PROGRESS':
       return { ...state, animationProgress: action.payload };
     case 'SET_AUDIO_FILE':
-      return { ...state, audioFile: action.payload, error: null };
+      return { ...state, audioFile: action.payload, error: null, mediaSwapTrigger: 0, lyrics: [] };
     case 'SET_AUDIO_DURATION':
       return { ...state, audioDuration: action.payload };
     case 'SET_CURRENT_TIME':
@@ -49,6 +51,10 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, aiGenerating: action.payload };
     case 'SET_ERROR':
       return { ...state, error: action.payload };
+    case 'SET_LYRICS':
+      return { ...state, lyrics: action.payload };
+    case 'TRIGGER_MEDIA_SWAP':
+      return { ...state, mediaSwapTrigger: state.mediaSwapTrigger + 1 };
     case 'RESET':
       return { ...initialState };
     default:

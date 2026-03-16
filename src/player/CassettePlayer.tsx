@@ -1,7 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useAppState } from '../state/AppContext';
 import { CASSETTE, getCassetteReelSpeeds } from '../animation/PlayerGeometry';
 import { TrackInfo } from './TrackInfo';
+import { LyricsDisplay } from './LyricsDisplay';
+import { AudioEngine } from '../audio/AudioEngine';
 
 /**
  * CassettePlayer - Realistic cassette player with visible tape reels, chrome accents,
@@ -10,11 +12,59 @@ import { TrackInfo } from './TrackInfo';
  */
 export function CassettePlayer() {
   const { state, dispatch } = useAppState();
-  const { animationPhase, albumArtUrl, currentTime, audioDuration } = state;
+  const { animationPhase, albumArtUrl, currentTime, audioDuration, playbackState, mediaSwapTrigger } = state;
 
   const isVisible = animationPhase !== 'closed';
   const isSpinning = animationPhase === 'playing';
+  const isPaused = playbackState === 'paused';
   const isOpen = animationPhase === 'open' || animationPhase === 'playing';
+
+  // Real-time VU meter levels (5 frequency bands)
+  const [vuLevels, setVuLevels] = useState<number[]>([0, 0, 0, 0, 0]);
+  const vuRafRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (animationPhase !== 'playing') {
+      setVuLevels([0, 0, 0, 0, 0]);
+      return;
+    }
+    const engine = AudioEngine.getInstance();
+    const tick = () => {
+      const analysers = engine.getAnalysers();
+      if (analysers) {
+        const data = new Uint8Array(analysers.reactive.frequencyBinCount);
+        analysers.reactive.getByteFrequencyData(data);
+        const binCount = data.length;
+        const bands = 5;
+        const binsPerBand = Math.floor(binCount / bands);
+        const levels: number[] = [];
+        for (let b = 0; b < bands; b++) {
+          let sum = 0;
+          for (let i = b * binsPerBand; i < (b + 1) * binsPerBand; i++) {
+            sum += data[i];
+          }
+          levels.push(sum / binsPerBand / 255);
+        }
+        setVuLevels(levels);
+      }
+      vuRafRef.current = requestAnimationFrame(tick);
+    };
+    vuRafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(vuRafRef.current);
+  }, [animationPhase]);
+
+  // Tape swap animation on first play after file load
+  const [showSwap, setShowSwap] = useState(false);
+  const prevSwapTrigger = useRef(mediaSwapTrigger);
+  useEffect(() => {
+    if (mediaSwapTrigger > 0 && mediaSwapTrigger !== prevSwapTrigger.current) {
+      prevSwapTrigger.current = mediaSwapTrigger;
+      setShowSwap(true);
+      const timer = setTimeout(() => setShowSwap(false), 1100);
+      return () => clearTimeout(timer);
+    }
+    prevSwapTrigger.current = mediaSwapTrigger;
+  }, [mediaSwapTrigger]);
 
   const progress = audioDuration > 0 ? currentTime / audioDuration : 0;
   const reelSpeeds = useMemo(() => getCassetteReelSpeeds(progress), [progress]);
@@ -66,22 +116,22 @@ export function CassettePlayer() {
 
       {/* Amber mood glow around reels */}
       <div
-        className="mood-glow"
+        className={`mood-glow ${!isSpinning && isVisible ? 'ambient-idle-glow' : ''}`}
         style={{
           left: CASSETTE.bodyX - CASSETTE.windowWidth / 2 - 20,
           top: CASSETTE.reelY - CASSETTE.reelRadius - 30,
           width: CASSETTE.windowWidth + 40,
           height: CASSETTE.reelRadius * 2 + 60,
           borderRadius: 20,
-          opacity: isOpen ? 0.6 : 0,
-          boxShadow: isOpen
-            ? '0 0 40px 10px rgba(255, 170, 50, 0.2), inset 0 0 20px rgba(255, 170, 50, 0.05)'
-            : 'none',
+          opacity: isSpinning ? 0.6 : undefined,
+          boxShadow: '0 0 40px 10px rgba(255, 170, 50, 0.2), inset 0 0 20px rgba(255, 170, 50, 0.05)',
+          transition: isSpinning ? 'opacity 0.5s ease, box-shadow 0.5s ease' : 'none',
         }}
       />
 
       {/* Cassette shell */}
       <div
+        className={showSwap ? 'cassette-swap-in' : ''}
         style={{
           position: 'absolute',
           left: bodyLeft,
@@ -191,6 +241,8 @@ export function CassettePlayer() {
             radius={CASSETTE.reelRadius}
             hubRadius={CASSETTE.reelHubRadius}
             spinning={isSpinning}
+            paused={isPaused}
+            glowing={isSpinning}
             duration={reelSpeeds.leftDuration}
             tapeRadius={CASSETTE.reelRadius * (1 - progress * 0.6)}
           />
@@ -202,6 +254,8 @@ export function CassettePlayer() {
             radius={CASSETTE.reelRadius}
             hubRadius={CASSETTE.reelHubRadius}
             spinning={isSpinning}
+            paused={isPaused}
+            glowing={isSpinning}
             duration={reelSpeeds.rightDuration}
             tapeRadius={CASSETTE.reelHubRadius + (CASSETTE.reelRadius - CASSETTE.reelHubRadius) * progress * 0.6 + CASSETTE.reelHubRadius}
           />
@@ -271,39 +325,50 @@ export function CassettePlayer() {
         }}
       />
 
-      {/* VU meter indicators */}
+      {/* Audio-reactive VU meter + Tape counter */}
       <div
         style={{
           position: 'absolute',
-          right: 80,
-          bottom: 125,
+          right: 70,
+          bottom: 118,
           display: 'flex',
-          gap: 3,
+          alignItems: 'center',
+          gap: 8,
         }}
       >
-        {[0.3, 0.5, 0.7, 0.9, 1.0].map((threshold, i) => (
-          <div
-            key={i}
-            style={{
-              width: 4,
-              height: 12,
-              borderRadius: 1,
-              background:
-                isSpinning && Math.random() > threshold
-                  ? i >= 4
-                    ? '#f44'
-                    : i >= 3
-                      ? '#fa0'
-                      : '#4a4'
-                  : '#333',
-              transition: 'background 0.1s',
-            }}
-          />
-        ))}
+        {/* VU meter bars */}
+        <div style={{ display: 'flex', gap: 3, alignItems: 'flex-end' }}>
+          {vuLevels.map((level, i) => (
+            <div
+              key={i}
+              style={{
+                width: 4,
+                height: 12,
+                borderRadius: 1,
+                background:
+                  level > 0.85 ? '#f44' : level > 0.6 ? '#fa0' : level > 0.2 ? '#4a4' : '#333',
+                opacity: Math.max(0.3, level),
+                transition: 'background 0.05s, opacity 0.05s',
+              }}
+            />
+          ))}
+        </div>
+        {/* Tape counter */}
+        <span
+          style={{
+            fontFamily: 'ui-monospace, monospace',
+            fontSize: 10,
+            color: '#998866',
+            letterSpacing: 1,
+          }}
+        >
+          A-{String(Math.min(999, Math.floor(currentTime))).padStart(3, '0')}
+        </span>
       </div>
 
       {/* Power LED */}
       <div
+        className={!isSpinning && isVisible ? 'led-idle' : ''}
         style={{
           position: 'absolute',
           left: 60,
@@ -311,12 +376,14 @@ export function CassettePlayer() {
           width: 6,
           height: 6,
           borderRadius: '50%',
-          background: isSpinning ? '#ffaa32' : '#333',
+          color: '#ffaa32',
+          background: isSpinning ? '#ffaa32' : '#4a3310',
           boxShadow: isSpinning ? '0 0 8px #ffaa32' : 'none',
-          transition: 'all 0.3s',
+          transition: isSpinning ? 'all 0.3s' : 'none',
         }}
       />
 
+      <LyricsDisplay />
       <TrackInfo />
     </div>
   );
@@ -329,6 +396,8 @@ function Reel({
   radius,
   hubRadius,
   spinning,
+  paused,
+  glowing,
   duration,
   tapeRadius,
 }: {
@@ -337,9 +406,17 @@ function Reel({
   radius: number;
   hubRadius: number;
   spinning: boolean;
+  paused: boolean;
+  glowing: boolean;
   duration: number;
   tapeRadius: number;
 }) {
+  // 3-way reel class: spinning / paused (preserve angle) / stopped (reset)
+  function getReelClass(): string {
+    if (spinning) return 'reel-spinning';
+    if (paused) return 'reel-spinning-paused';
+    return '';
+  }
   return (
     <div
       style={{
@@ -367,7 +444,7 @@ function Reel({
 
       {/* Reel hub (spinning part) */}
       <div
-        className={spinning ? 'reel-spinning' : ''}
+        className={getReelClass()}
         style={{
           position: 'absolute',
           left: radius - hubRadius,
@@ -378,9 +455,11 @@ function Reel({
           background:
             'radial-gradient(circle, #666 0%, #555 40%, #444 100%)',
           border: '2px solid #777',
-          boxShadow:
-            'inset 0 1px 2px rgba(255,255,255,0.2), 0 1px 3px rgba(0,0,0,0.4)',
-          animationDuration: spinning ? `${duration}s` : undefined,
+          boxShadow: glowing
+            ? 'inset 0 0 8px 3px rgba(255, 170, 50, 0.4), 0 0 12px 2px rgba(255, 170, 50, 0.25), inset 0 1px 2px rgba(255,255,255,0.2)'
+            : 'inset 0 1px 2px rgba(255,255,255,0.2), 0 1px 3px rgba(0,0,0,0.4)',
+          transition: 'box-shadow 0.5s ease',
+          animationDuration: (spinning || paused) ? `${duration}s` : undefined,
         }}
       >
         {/* Reel spokes */}

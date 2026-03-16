@@ -22,6 +22,7 @@ export interface CDRenderState {
   audioDuration: number;
   rotation: number;
   audioFileName: string;
+  beatActive?: boolean;
 }
 
 export class CDRenderer {
@@ -142,11 +143,26 @@ export class CDRenderer {
 
     ctx.restore();
 
-    // Brand label
-    drawText(ctx, 'DIGITAL', CD_PLAYER.discX, 600, {
+    // Beat LED + OPTICAL label
+    const beat = state.beatActive ?? false;
+    const ledX = CD_PLAYER.discX - 30;
+    const ledY = 600;
+
+    // LED dot
+    ctx.save();
+    if (beat) {
+      ctx.shadowColor = '#ff4444';
+      ctx.shadowBlur = 8;
+    }
+    drawCircle(ctx, ledX, ledY, 3, beat ? '#ff4444' : '#331111');
+    ctx.restore();
+
+    // OPTICAL text
+    drawText(ctx, 'OPTICAL', ledX + 14, ledY, {
       font: '10px monospace',
       color: '#556',
-      align: 'center',
+      align: 'left',
+      baseline: 'middle',
     });
 
     // Power LED

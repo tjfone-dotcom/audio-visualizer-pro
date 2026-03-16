@@ -2,6 +2,7 @@ import { useCallback, useRef } from 'react';
 import { useAppState } from '../state/AppContext';
 import { AudioEngine } from '../audio/AudioEngine';
 import { isAudioFile } from '../audio/audioUtils';
+import { extractMetadata } from '../audio/metadataExtractor';
 
 export function FileUpload() {
   const { state, dispatch } = useAppState();
@@ -18,13 +19,29 @@ export function FileUpload() {
 
     dispatch({ type: 'SET_PLAYBACK_STATE', payload: 'loading' });
     dispatch({ type: 'SET_AUDIO_FILE', payload: file });
+    // Reset previous album art and lyrics
+    dispatch({ type: 'SET_ALBUM_ART', payload: { url: null, source: 'user' } });
+    dispatch({ type: 'SET_LYRICS', payload: [] });
 
     try {
+      // Load audio and extract metadata in parallel
       const engine = AudioEngine.getInstance();
-      const duration = await engine.loadFile(file);
+      const [duration, metadata] = await Promise.all([
+        engine.loadFile(file),
+        extractMetadata(file),
+      ]);
       dispatch({ type: 'SET_AUDIO_DURATION', payload: duration });
       dispatch({ type: 'SET_CURRENT_TIME', payload: 0 });
       dispatch({ type: 'SET_PLAYBACK_STATE', payload: 'stopped' });
+
+      // Apply embedded album art if no user/AI art is set
+      if (metadata.albumArtUrl) {
+        dispatch({ type: 'SET_ALBUM_ART', payload: { url: metadata.albumArtUrl, source: 'user' } });
+      }
+      // Apply embedded lyrics
+      if (metadata.lyrics.length > 0) {
+        dispatch({ type: 'SET_LYRICS', payload: metadata.lyrics });
+      }
     } catch {
       dispatch({
         type: 'SET_ERROR',

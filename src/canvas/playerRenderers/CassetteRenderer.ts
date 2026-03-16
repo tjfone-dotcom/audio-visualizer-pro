@@ -23,6 +23,7 @@ export interface CassetteRenderState {
   leftReelRotation: number;
   rightReelRotation: number;
   audioFileName: string;
+  vuLevels?: number[];
 }
 
 export class CassetteRenderer {
@@ -191,6 +192,30 @@ export class CassetteRenderer {
     ]);
     ctx.fillStyle = trimGrad;
     ctx.fillRect(bodyLeft - 40, bodyTop + CASSETTE.bodyHeight + 40, CASSETTE.bodyWidth + 80, 2);
+
+    // Audio-reactive VU meter + Tape counter
+    const vuLevels = state.vuLevels ?? [0, 0, 0, 0, 0];
+    const vuBaseX = 540;
+    const vuBaseY = 596;
+    for (let i = 0; i < 5; i++) {
+      const level = vuLevels[i];
+      const color = level > 0.85 ? '#f44' : level > 0.6 ? '#fa0' : level > 0.2 ? '#4a4' : '#333';
+      ctx.globalAlpha = Math.max(0.3, level);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.roundRect(vuBaseX + i * 7, vuBaseY, 4, 12, 1);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // Tape counter
+    const counter = `A-${String(Math.min(999, Math.floor(currentTime))).padStart(3, '0')}`;
+    drawText(ctx, counter, vuBaseX + 45, vuBaseY + 6, {
+      font: '10px monospace',
+      color: '#998866',
+      align: 'left',
+      baseline: 'middle',
+    });
 
     // Power LED
     if (isSpinning) {

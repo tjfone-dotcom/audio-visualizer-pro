@@ -22,6 +22,7 @@ export interface TurntableRenderState {
   audioDuration: number;
   rotation: number;
   audioFileName: string;
+  bassEnergy?: number; // 0~1 smoothed bass energy for analog slider
 }
 
 export class TurntableRenderer {
@@ -164,12 +165,47 @@ export class TurntableRenderer {
 
     ctx.restore();
 
-    // Speed indicator label
-    drawText(ctx, '33 RPM', 580, 600, {
+    // Analog bass slider + STEREO label
+    const stereoTextX = 580;
+    const sliderW = 48;
+    const sliderGap = 8;
+    const sliderX = stereoTextX - sliderGap - sliderW; // slider to the left of text
+    const sliderY = 600;
+    const sliderH = 4;
+    const knobR = 4;
+    const energy = isSpinning ? (state.bassEnergy ?? 0) : 0.5;
+
+    // STEREO label (always visible)
+    drawText(ctx, 'STEREO', stereoTextX, sliderY, {
       font: '10px monospace',
       color: '#665544',
       align: 'right',
+      baseline: 'middle',
     });
+
+    // Track
+    ctx.fillStyle = '#332b20';
+    ctx.beginPath();
+    ctx.roundRect(sliderX, sliderY - sliderH / 2, sliderW, sliderH, 2);
+    ctx.fill();
+    // Track inner shadow
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.roundRect(sliderX, sliderY - sliderH / 2, sliderW, sliderH, 2);
+    ctx.stroke();
+
+    // Knob
+    const knobX = sliderX + energy * sliderW;
+    const knobGrad = createRadialGradient(ctx, knobX, sliderY, 0, knobR, [
+      [0, '#bba880'],
+      [1, '#998866'],
+    ]);
+    ctx.save();
+    ctx.shadowColor = 'rgba(153,136,102,0.3)';
+    ctx.shadowBlur = 4;
+    drawCircle(ctx, knobX, sliderY, knobR, knobGrad);
+    ctx.restore();
 
     // Power LED
     if (isSpinning) {

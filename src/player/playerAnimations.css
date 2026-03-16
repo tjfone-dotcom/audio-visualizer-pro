@@ -74,6 +74,26 @@
   to { transform: rotate(-30deg); }
 }
 
+/* Idle breathing LED pulse */
+@keyframes idle-breathe {
+  0%, 100% { opacity: 0.25; box-shadow: 0 0 3px currentColor; }
+  50% { opacity: 0.7; box-shadow: 0 0 8px currentColor; }
+}
+
+.led-idle {
+  animation: idle-breathe 3s ease-in-out infinite;
+}
+
+/* Subtle idle ambient glow */
+@keyframes idle-glow {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.3; }
+}
+
+.ambient-idle-glow {
+  animation: idle-glow 4s ease-in-out infinite;
+}
+
 /* Common player container */
 .player-container {
   position: relative;
@@ -116,6 +136,51 @@
   animation: spin linear infinite;
 }
 
+.reel-spinning-paused {
+  animation: spin linear infinite;
+  animation-play-state: paused;
+}
+
+/* Disc swap: slides in from the left like being loaded onto the platter */
+@keyframes discSwapIn {
+  0%   { transform: translateX(-280px) scale(0.95); opacity: 0; }
+  25%  { opacity: 1; }
+  60%  { transform: translateX(0) scale(1); }
+  72%  { transform: translateX(6px) scale(1.02); }
+  82%  { transform: translateX(-3px) scale(1); }
+  90%  { transform: translateX(1px) scale(1.005); }
+  100% { transform: translateX(0) scale(1); opacity: 1; }
+}
+
+.disc-swap-in {
+  animation: discSwapIn 1.2s cubic-bezier(0.22, 0.6, 0.36, 1) forwards;
+}
+
+/* Cassette swap: slides up from below like being inserted into the deck */
+@keyframes cassetteSwapIn {
+  0%   { transform: translateY(200px) scale(0.96); opacity: 0; }
+  25%  { opacity: 1; }
+  55%  { transform: translateY(0) scale(1); }
+  68%  { transform: translateY(-8px) scale(1.015); }
+  78%  { transform: translateY(3px) scale(1); }
+  88%  { transform: translateY(-1px) scale(1.003); }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.cassette-swap-in {
+  animation: cassetteSwapIn 1.1s cubic-bezier(0.22, 0.6, 0.36, 1) forwards;
+}
+
+/* Reel hub mood glow */
+@keyframes reelHubGlow {
+  0%, 100% { box-shadow: inset 0 0 6px 2px rgba(255, 170, 50, 0.3); }
+  50% { box-shadow: inset 0 0 10px 4px rgba(255, 170, 50, 0.5); }
+}
+
+.reel-hub-glow {
+  animation: reelHubGlow 2s ease-in-out infinite;
+}
+
 /* Track info */
 .track-info {
   position: absolute;
@@ -126,13 +191,24 @@
   background: linear-gradient(transparent, rgba(0,0,0,0.8));
 }
 
+/* Lyric line fade-in */
+@keyframes lyricFadeIn {
+  0% { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
 .progress-bar-container {
   width: 100%;
-  height: 3px;
+  height: 4px;
   background: rgba(255,255,255,0.1);
   border-radius: 2px;
   overflow: hidden;
   cursor: pointer;
+  transition: height 0.15s ease;
+}
+
+.progress-bar-container:hover {
+  height: 8px;
 }
 
 .progress-bar-fill {

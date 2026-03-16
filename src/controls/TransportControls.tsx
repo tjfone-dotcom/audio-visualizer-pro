@@ -17,6 +17,7 @@ export function TransportControls() {
     const removeEnded = engine.onEnded(() => {
       dispatch({ type: 'SET_PLAYBACK_STATE', payload: 'stopped' });
       dispatch({ type: 'SET_CURRENT_TIME', payload: 0 });
+      dispatch({ type: 'SET_ANIMATION_PHASE', payload: 'open' });
     });
     return () => {
       removeTimeUpdate();
@@ -29,10 +30,15 @@ export function TransportControls() {
     if (isPlaying) {
       engine.pause();
       dispatch({ type: 'SET_PLAYBACK_STATE', payload: 'paused' });
+      dispatch({ type: 'SET_ANIMATION_PHASE', payload: 'open' });
     } else {
       try {
         await engine.play();
         dispatch({ type: 'SET_PLAYBACK_STATE', payload: 'playing' });
+        dispatch({ type: 'SET_ANIMATION_PHASE', payload: 'playing' });
+        if (state.mediaSwapTrigger === 0) {
+          dispatch({ type: 'TRIGGER_MEDIA_SWAP' });
+        }
       } catch {
         dispatch({
           type: 'SET_ERROR',
@@ -40,13 +46,14 @@ export function TransportControls() {
         });
       }
     }
-  }, [isPlaying, dispatch]);
+  }, [isPlaying, dispatch, state.mediaSwapTrigger]);
 
   const handleStop = useCallback(() => {
     const engine = AudioEngine.getInstance();
     engine.stop();
     dispatch({ type: 'SET_PLAYBACK_STATE', payload: 'stopped' });
     dispatch({ type: 'SET_CURRENT_TIME', payload: 0 });
+    dispatch({ type: 'SET_ANIMATION_PHASE', payload: 'open' });
   }, [dispatch]);
 
   return (

@@ -1,4 +1,4 @@
-import type { PlaybackState, PlayerStyle, AnimationPhase, RecordingState, AppError, AlbumArtSource } from '../types/player';
+import type { PlaybackState, PlayerStyle, AnimationPhase, RecordingState, AppError, AlbumArtSource, LyricLine } from '../types/player';
 
 export type AppAction =
   | { type: 'SET_PLAYBACK_STATE'; payload: PlaybackState }
@@ -15,4 +15,6 @@ export type AppAction =
   | { type: 'SET_AI_PROMPT'; payload: string }
   | { type: 'SET_AI_GENERATING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: AppError | null }
+  | { type: 'SET_LYRICS'; payload: LyricLine[] }
+  | { type: 'TRIGGER_MEDIA_SWAP' }
   | { type: 'RESET' };

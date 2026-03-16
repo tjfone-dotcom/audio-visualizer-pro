@@ -15,7 +15,7 @@ export function Layout({ controls }: LayoutProps) {
         </h1>
       </header>
 
-      <main className="flex-1 flex flex-col items-center gap-6 pb-8">
+      <main className="flex-1 flex flex-col items-center gap-6 pb-16">
         <ErrorBanner />
         <VisualizationArea />
         <div className="w-full max-w-5xl px-4">

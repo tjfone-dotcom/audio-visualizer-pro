@@ -13,7 +13,7 @@ const STYLES: { value: PlayerStyle; label: string; icon: string }[] = [
  */
 export function StyleSelector() {
   const { state, dispatch } = useAppState();
-  const { playerStyle, animationPhase } = state;
+  const { playerStyle, animationPhase, playbackState } = state;
 
   function handleStyleChange(style: PlayerStyle) {
     if (style === playerStyle) return;
@@ -25,6 +25,8 @@ export function StyleSelector() {
       // We set the style change with a delay to let closing finish.
       setTimeout(() => {
         dispatch({ type: 'SET_PLAYER_STYLE', payload: style });
+        const targetPhase = playbackState === 'playing' ? 'playing' : 'open';
+        dispatch({ type: 'SET_ANIMATION_PHASE', payload: targetPhase });
       }, 550);
     } else {
       dispatch({ type: 'SET_PLAYER_STYLE', payload: style });

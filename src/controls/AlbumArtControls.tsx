@@ -90,12 +90,13 @@ export function AlbumArtControls() {
       <div className="flex items-center gap-2">
         <label
           className="
-            px-3 py-1.5 rounded-md text-xs font-mono tracking-wide
+            py-1.5 rounded-md text-xs font-mono tracking-wide text-center
             bg-neutral-800/60 text-neutral-400
             hover:bg-neutral-700/60 hover:text-neutral-300
             transition-all duration-200 cursor-pointer
             border border-neutral-700/40
           "
+          style={{ width: 80, display: 'inline-block' }}
         >
           {state.albumArtUrl ? 'Change Art' : 'Album Art'}
           <input
@@ -126,20 +127,49 @@ export function AlbumArtControls() {
           AI Gen
         </button>
 
-        {state.albumArtUrl && (
+        {state.albumArtSource === 'ai' && state.albumArtUrl && (
           <button
-            onClick={handleClear}
+            type="button"
+            onClick={() => {
+              const link = document.createElement('a');
+              link.href = state.albumArtUrl!;
+              link.download = `album-art-${Date.now()}.png`;
+              link.click();
+            }}
             className="
-              px-2 py-1.5 rounded-md text-xs font-mono
-              text-neutral-500 hover:text-neutral-300
-              hover:bg-neutral-700/40 transition-all duration-200
-              cursor-pointer
+              p-1.5 rounded-md text-xs
+              transition-all duration-200 cursor-pointer
+              bg-neutral-800/60 border border-neutral-700/40
+              text-neutral-400 hover:bg-neutral-700/60 hover:text-neutral-300
             "
-            aria-label="Remove album art"
+            aria-label="Download AI generated album art"
+            title="Download AI album art"
           >
-            Clear
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
           </button>
         )}
+
+        <button
+          onClick={handleClear}
+          disabled={!state.albumArtUrl}
+          className="
+            px-2 py-1.5 rounded-md text-xs font-mono
+            transition-all duration-200
+          "
+          style={{
+            opacity: state.albumArtUrl ? 1 : 0,
+            pointerEvents: state.albumArtUrl ? 'auto' : 'none',
+            color: '#737373',
+            cursor: state.albumArtUrl ? 'pointer' : 'default',
+          }}
+          aria-label="Remove album art"
+        >
+          Clear
+        </button>
       </div>
 
       {showAI && (
